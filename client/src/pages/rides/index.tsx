@@ -70,7 +70,8 @@ export default function RidesIndex() {
             <RideCard
               key={ride.id}
               ride={ride}
-              onRequestJoin={handleRequestJoin}
+              showActions={true}
+              onJoinRequest={() => handleRequestJoin(ride.id)}
             />
           ))}
         </div>
