@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -38,7 +39,13 @@ export default function Login() {
     try {
       setIsLoading(true);
       await apiRequest("POST", "/api/auth/login", values);
-      setLocation("/rides");
+      // Invalidate the auth query to refetch user data
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      toast({
+        title: "Success",
+        description: "Logged in successfully",
+      });
+      window.location.href = "/rides";
     } catch (error) {
       toast({
         variant: "destructive",
@@ -53,7 +60,7 @@ export default function Login() {
   return (
     <div className="max-w-md mx-auto mt-20">
       <h1 className="text-2xl font-bold text-center mb-8">Welcome Back</h1>
-      
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField
@@ -69,7 +76,7 @@ export default function Login() {
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="password"
