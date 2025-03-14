@@ -14,6 +14,7 @@ export default function RidesIndex() {
 
   const { data: rides = [], isLoading } = useQuery<Ride[]>({
     queryKey: ["/api/rides"],
+    select: (data) => data.filter(ride => ride.status === "active" && ride.availableSeats > 0),
   });
 
   const handleRequestJoin = async (rideId: number) => {
