@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import LocationSearch from "@/components/location-search";
 
 export default function CreateRide() {
   const [, setLocation] = useLocation();
@@ -65,7 +66,10 @@ export default function CreateRide() {
               <FormItem>
                 <FormLabel>Pickup Location</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter pickup location" {...field} />
+                  <LocationSearch
+                    placeholder="Search pickup location"
+                    onSelect={(location) => field.onChange(location.name)}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -79,7 +83,10 @@ export default function CreateRide() {
               <FormItem>
                 <FormLabel>Destination</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter destination" {...field} />
+                  <LocationSearch
+                    placeholder="Search destination"
+                    onSelect={(location) => field.onChange(location.name)}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
