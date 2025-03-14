@@ -26,30 +26,30 @@ export default function RideCard({ ride, onRequestJoin, showActions = true }: Ri
               <span className="font-medium">{ride.destination}</span>
             </div>
           </div>
-          
+
           <Badge variant={ride.status === "active" ? "default" : "secondary"}>
             {ride.status}
           </Badge>
         </div>
-        
+
         <div className="grid grid-cols-3 gap-4">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span>{format(new Date(ride.departureTime), "MMM d, h:mm a")}</span>
+            <span>{format(new Date(ride.departureDate), "MMM d, h:mm a")}</span>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-muted-foreground" />
             <span>{ride.availableSeats} seats left</span>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <IndianRupee className="h-4 w-4 text-muted-foreground" />
             <span>₹{ride.costPerSeat} per seat</span>
           </div>
         </div>
       </CardContent>
-      
+
       {showActions && (
         <CardFooter className="flex justify-end pt-4">
           <Button

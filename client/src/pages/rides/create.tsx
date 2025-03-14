@@ -26,7 +26,7 @@ export default function CreateRide() {
     defaultValues: {
       source: "",
       destination: "",
-      departureTime: new Date().toISOString(),
+      departureDate: new Date().toISOString().slice(0, 16), // Format: YYYY-MM-DDThh:mm
       availableSeats: 1,
       costPerSeat: 50,
     },
@@ -55,7 +55,7 @@ export default function CreateRide() {
   return (
     <div className="max-w-md mx-auto">
       <h1 className="text-2xl font-bold mb-8">Offer a Ride</h1>
-      
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField
@@ -71,7 +71,7 @@ export default function CreateRide() {
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="destination"
@@ -85,21 +85,24 @@ export default function CreateRide() {
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
-            name="departureTime"
+            name="departureDate"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Departure Time</FormLabel>
+                <FormLabel>Departure Date & Time</FormLabel>
                 <FormControl>
-                  <Input type="datetime-local" {...field} />
+                  <Input 
+                    type="datetime-local" 
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="availableSeats"
@@ -119,7 +122,7 @@ export default function CreateRide() {
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="costPerSeat"

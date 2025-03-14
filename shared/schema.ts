@@ -15,7 +15,7 @@ export const rides = pgTable("rides", {
   creatorId: integer("creator_id").notNull(),
   source: text("source").notNull(),
   destination: text("destination").notNull(),
-  departureTime: timestamp("departure_time").notNull(),
+  departureDate: timestamp("departure_date").notNull(),
   availableSeats: integer("available_seats").notNull(),
   costPerSeat: integer("cost_per_seat").notNull(),
   status: text("status").notNull().default("active"),
@@ -41,10 +41,11 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export const insertRideSchema = createInsertSchema(rides).pick({
   source: true,
   destination: true,
-  departureTime: true,
+  departureDate: true,
   availableSeats: true,
   costPerSeat: true,
 }).extend({
+  departureDate: z.string().transform((str) => new Date(str)),
   availableSeats: z.number().min(1).max(4),
   costPerSeat: z.number().min(10),
 });
