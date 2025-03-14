@@ -1,28 +1,43 @@
 import type { Express } from "express";
-import { createServer } from "http";
+import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertRideSchema, insertBookingSchema } from "@shared/schema";
-import { ZodError } from "zod";
+import { insertUserSchema, insertRideSchema, insertRideRequestSchema } from "@shared/schema";
+import session from "express-session";
+import MemoryStore from "memorystore";
 
-export async function registerRoutes(app: Express) {
-  const httpServer = createServer(app);
+// Extend express-session types to include our custom properties
+declare module "express-session" {
+  interface SessionData {
+    userId: number;
+  }
+}
+
+const SessionStore = MemoryStore(session);
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  app.use(
+    session({
+      store: new SessionStore({ checkPeriod: 86400000 }),
+      secret: "your-secret-key",
+      resave: false,
+      saveUninitialized: false,
+      cookie: { secure: false },
+    })
+  );
 
   // Auth routes
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const userData = insertUserSchema.parse(req.body);
-      const existingUser = await storage.getUserByUsername(userData.username);
+      const data = insertUserSchema.parse(req.body);
+      const existingUser = await storage.getUserByUsername(data.username);
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
       }
-      const user = await storage.createUser(userData);
-      res.json(user);
+      const user = await storage.createUser(data);
+      req.session.userId = user.id;
+      res.json({ id: user.id, username: user.username });
     } catch (error) {
-      if (error instanceof ZodError) {
-        res.status(400).json({ message: "Invalid input", errors: error.errors });
-      } else {
-        res.status(500).json({ message: "Internal server error" });
-      }
+      res.status(400).json({ message: error instanceof Error ? error.message : "Invalid request" });
     }
   });
 
@@ -34,66 +49,102 @@ export async function registerRoutes(app: Express) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
       req.session.userId = user.id;
-      res.json({ user });
+      res.json({ id: user.id, username: user.username });
     } catch (error) {
-      res.status(500).json({ message: "Internal server error" });
+      res.status(400).json({ message: "Invalid request" });
+    }
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy(() => {
+      res.json({ message: "Logged out" });
+    });
+  });
+
+  app.get("/api/auth/me", async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+      const user = await storage.getUserById(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch user data" });
     }
   });
 
   // Ride routes
-  app.post("/api/rides", async (req, res) => {
+  app.get("/api/rides", async (req, res) => {
     try {
-      if (!req.session.userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      const rideData = insertRideSchema.parse(req.body);
+      const rides = await storage.listRides();
+      res.json(rides);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch rides" });
+    }
+  });
+
+  app.post("/api/rides", async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+      const data = insertRideSchema.parse(req.body);
       const ride = await storage.createRide({
-        ...rideData,
+        ...data,
         creatorId: req.session.userId,
       });
       res.json(ride);
     } catch (error) {
-      if (error instanceof ZodError) {
-        res.status(400).json({ message: "Invalid input", errors: error.errors });
-      } else {
-        res.status(500).json({ message: "Internal server error" });
-      }
+      res.status(400).json({ message: error instanceof Error ? error.message : "Invalid request" });
     }
   });
 
-  app.get("/api/rides", async (req, res) => {
-    try {
-      const { source, destination } = req.query;
-      const rides = await storage.searchRides(
-        source as string,
-        destination as string
-      );
-      res.json(rides);
-    } catch (error) {
-      res.status(500).json({ message: "Internal server error" });
+  app.post("/api/rides/:rideId/requests", async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
-  });
 
-  // Booking routes
-  app.post("/api/bookings", async (req, res) => {
     try {
-      if (!req.session.userId) {
-        return res.status(401).json({ message: "Unauthorized" });
+      const rideId = parseInt(req.params.rideId);
+      const ride = await storage.getRideById(rideId);
+
+      if (!ride) {
+        return res.status(404).json({ message: "Ride not found" });
       }
-      const bookingData = insertBookingSchema.parse(req.body);
-      const booking = await storage.createBooking({
-        ...bookingData,
+
+      if (ride.availableSeats < 1) {
+        return res.status(400).json({ message: "No seats available" });
+      }
+
+      const request = await storage.createRideRequest({
+        rideId,
         userId: req.session.userId,
       });
-      res.json(booking);
+
+      res.json(request);
     } catch (error) {
-      if (error instanceof ZodError) {
-        res.status(400).json({ message: "Invalid input", errors: error.errors });
-      } else {
-        res.status(500).json({ message: "Internal server error" });
-      }
+      res.status(400).json({ message: "Invalid request" });
     }
   });
 
+  app.get("/api/user/rides", async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+      const rides = await storage.listUserRides(req.session.userId);
+      res.json(rides);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch user rides" });
+    }
+  });
+
+  const httpServer = createServer(app);
   return httpServer;
 }

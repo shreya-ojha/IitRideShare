@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -7,8 +7,7 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   fullName: text("full_name").notNull(),
-  email: text("email").notNull(),
-  avatar: text("avatar")
+  studentId: text("student_id").notNull(),
 });
 
 export const rides = pgTable("rides", {
@@ -22,23 +21,21 @@ export const rides = pgTable("rides", {
   status: text("status").notNull().default("active"),
 });
 
-export const bookings = pgTable("bookings", {
+export const rideRequests = pgTable("ride_requests", {
   id: serial("id").primaryKey(),
   rideId: integer("ride_id").notNull(),
   userId: integer("user_id").notNull(),
   status: text("status").notNull().default("pending"),
-  requestedSeats: integer("requested_seats").notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
   fullName: true,
-  email: true,
-  avatar: true,
+  studentId: true,
 }).extend({
-  email: z.string().email(),
-  password: z.string().min(6)
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  studentId: z.string().regex(/^\d{8}$/, "Student ID must be 8 digits"),
 });
 
 export const insertRideSchema = createInsertSchema(rides).pick({
@@ -47,16 +44,18 @@ export const insertRideSchema = createInsertSchema(rides).pick({
   departureTime: true,
   availableSeats: true,
   costPerSeat: true,
+}).extend({
+  availableSeats: z.number().min(1).max(4),
+  costPerSeat: z.number().min(10),
 });
 
-export const insertBookingSchema = createInsertSchema(bookings).pick({
+export const insertRideRequestSchema = createInsertSchema(rideRequests).pick({
   rideId: true,
-  requestedSeats: true,
 });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Ride = typeof rides.$inferSelect;
 export type InsertRide = z.infer<typeof insertRideSchema>;
-export type Booking = typeof bookings.$inferSelect;
-export type InsertBooking = z.infer<typeof insertBookingSchema>;
+export type RideRequest = typeof rideRequests.$inferSelect;
+export type InsertRideRequest = z.infer<typeof insertRideRequestSchema>;
