@@ -132,6 +132,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/rides/:rideId/requests", async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+      const rideId = parseInt(req.params.rideId);
+      const ride = await storage.getRideById(rideId);
+
+      if (!ride) {
+        return res.status(404).json({ message: "Ride not found" });
+      }
+
+      // Only ride creator can view requests
+      if (ride.creatorId !== req.session.userId) {
+        return res.status(403).json({ message: "Not authorized to view these requests" });
+      }
+
+      const requests = await storage.getRideRequests(rideId);
+      // Get user details for each request
+      const requestsWithUsers = await Promise.all(
+        requests.map(async (request) => {
+          const user = await storage.getUserById(request.userId);
+          return {
+            ...request,
+            user: user ? {
+              username: user.username,
+              fullName: user.fullName,
+              studentId: user.studentId
+            } : null
+          };
+        })
+      );
+
+      res.json(requestsWithUsers);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch ride requests" });
+    }
+  });
+
+  app.post("/api/rides/:rideId/requests/:requestId", async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+      const rideId = parseInt(req.params.rideId);
+      const requestId = parseInt(req.params.requestId);
+      const { status } = req.body; // status should be 'accepted' or 'rejected'
+
+      const ride = await storage.getRideById(rideId);
+      if (!ride) {
+        return res.status(404).json({ message: "Ride not found" });
+      }
+
+      // Only ride creator can approve/reject requests
+      if (ride.creatorId !== req.session.userId) {
+        return res.status(403).json({ message: "Not authorized to manage requests" });
+      }
+
+      if (status === 'accepted' && ride.availableSeats < 1) {
+        return res.status(400).json({ message: "No seats available" });
+      }
+
+      await storage.updateRideRequestStatus(requestId, status);
+
+      if (status === 'accepted') {
+        // Update available seats
+        await storage.updateRideSeats(rideId, ride.availableSeats - 1);
+      }
+
+      res.json({ message: `Request ${status}` });
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update request" });
+    }
+  });
+
   app.get("/api/user/rides", async (req, res) => {
     if (!req.session.userId) {
       return res.status(401).json({ message: "Unauthorized" });

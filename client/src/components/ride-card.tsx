@@ -4,6 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, Calendar, Users, IndianRupee } from "lucide-react";
 import { format } from "date-fns";
 import type { Ride } from "@shared/schema";
+import RideRequests from "./ride-requests";
+import { useQuery } from "@tanstack/react-query";
+import type { User } from "@shared/schema";
 
 interface RideCardProps {
   ride: Ride;
@@ -12,6 +15,13 @@ interface RideCardProps {
 }
 
 export default function RideCard({ ride, onRequestJoin, showActions = true }: RideCardProps) {
+  // Get current user to check if they're the ride creator
+  const { data: currentUser } = useQuery<User>({
+    queryKey: ["/api/auth/me"],
+  });
+
+  const isCreator = currentUser?.id === ride.creatorId;
+
   return (
     <Card>
       <CardContent className="pt-6">
@@ -48,9 +58,16 @@ export default function RideCard({ ride, onRequestJoin, showActions = true }: Ri
             <span>₹{ride.costPerSeat} per seat</span>
           </div>
         </div>
+
+        {isCreator && (
+          <div className="mt-6">
+            <h3 className="text-sm font-medium mb-2">Ride Requests</h3>
+            <RideRequests rideId={ride.id} />
+          </div>
+        )}
       </CardContent>
 
-      {showActions && (
+      {showActions && !isCreator && (
         <CardFooter className="flex justify-end pt-4">
           <Button
             onClick={() => onRequestJoin?.(ride.id)}
