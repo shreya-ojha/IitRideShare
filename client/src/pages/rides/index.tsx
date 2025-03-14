@@ -35,6 +35,7 @@ export default function RidesIndex() {
 
   const filteredRides = rides.filter(
     (ride) =>
+      !search || 
       ride.source.toLowerCase().includes(search.toLowerCase()) ||
       ride.destination.toLowerCase().includes(search.toLowerCase())
   );
