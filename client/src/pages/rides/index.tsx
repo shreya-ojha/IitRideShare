@@ -1,89 +1,112 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import RideCard from "@/components/ride-card";
-import { useToast } from "@/hooks/use-toast";
+
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import type { Ride } from "@shared/schema";
-import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import type { Ride, RideRequest } from "@shared/schema";
 
 export default function RidesIndex() {
   const { toast } = useToast();
-  const [search, setSearch] = useState("");
-
-  const { data: rides = [], isLoading } = useQuery<Ride[]>({
+  
+  const { data: rides = [] } = useQuery<Ride[]>({
     queryKey: ["/api/rides"],
-    select: (data) => data.filter(ride => 
-      ride.status === "active" && 
-      ride.availableSeats > 0 &&
-      ride.creatorId !== Number(localStorage.getItem("userId"))
-    ),
   });
 
-  const handleRequestJoin = async (rideId: number) => {
-    try {
-      await apiRequest("POST", `/api/rides/${rideId}/requests`);
-      await queryClient.invalidateQueries({ queryKey: ["/api/rides"] });
-      toast({
-        title: "Success",
-        description: "Ride request sent successfully",
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Failed to request ride",
-        description: error instanceof Error ? error.message : "Please try again",
-      });
-    }
-  };
+  const { data: user } = useQuery({
+    queryKey: ["/api/auth/me"],
+  });
 
-  const filteredRides = rides.filter(
-    (ride) =>
-      !search || 
-      ride.source.toLowerCase().includes(search.toLowerCase()) ||
-      ride.destination.toLowerCase().includes(search.toLowerCase())
-  );
+  const { data: requests = [] } = useQuery<RideRequest[]>({
+    queryKey: ["/api/rides/requests"],
+    enabled: !!user,
+  });
+
+  const updateRequestMutation = useMutation({
+    mutationFn: async ({ requestId, rideId, status }: { requestId: number, rideId: number, status: string }) => {
+      return apiRequest("POST", `/api/rides/${rideId}/requests/${requestId}`, { status });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Request updated",
+        description: "The ride request has been updated.",
+      });
+    },
+  });
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold">Available Rides</h1>
-        <div className="flex gap-4 items-center">
-          <Input
-            placeholder="Search by location..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-64"
-          />
-        </div>
-      </div>
-
-      {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className="h-48 rounded-lg bg-muted animate-pulse"
-            ></div>
+    <div className="space-y-8">
+      <h1 className="text-3xl font-bold">Available Rides</h1>
+      
+      {user && rides.some(ride => ride.creatorId === user.id) && (
+        <div className="bg-muted p-4 rounded-lg space-y-4">
+          <h2 className="text-xl font-semibold">Pending Requests</h2>
+          {requests.map((request) => (
+            <div key={request.id} className="flex items-center justify-between bg-background p-4 rounded-lg">
+              <div>
+                <p>From: {request.user?.username}</p>
+                <p className="text-sm text-muted-foreground">Student ID: {request.user?.studentId}</p>
+              </div>
+              <div className="space-x-2">
+                <Button 
+                  variant="default"
+                  onClick={() => updateRequestMutation.mutate({ 
+                    requestId: request.id, 
+                    rideId: request.rideId,
+                    status: 'accepted' 
+                  })}
+                >
+                  Accept
+                </Button>
+                <Button 
+                  variant="destructive"
+                  onClick={() => updateRequestMutation.mutate({ 
+                    requestId: request.id,
+                    rideId: request.rideId, 
+                    status: 'rejected' 
+                  })}
+                >
+                  Decline
+                </Button>
+              </div>
+            </div>
           ))}
-        </div>
-      ) : filteredRides.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {filteredRides.map((ride) => (
-            <RideCard
-              key={ride.id}
-              ride={ride}
-              showActions={true}
-              onJoinRequest={() => handleRequestJoin(ride.id)}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No rides available</p>
         </div>
       )}
+
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        {rides.map((ride) => (
+          <div key={ride.id} className="bg-muted p-4 rounded-lg">
+            <h3 className="font-semibold">{ride.source} → {ride.destination}</h3>
+            <p className="text-sm text-muted-foreground">
+              {new Date(ride.departureDate).toLocaleString()}
+            </p>
+            <p>Available seats: {ride.availableSeats}</p>
+            <p>Cost per seat: ₹{ride.costPerSeat}</p>
+            {user && user.id !== ride.creatorId && (
+              <Button 
+                className="mt-2"
+                onClick={async () => {
+                  try {
+                    await apiRequest("POST", `/api/rides/${ride.id}/requests`);
+                    toast({
+                      title: "Request sent",
+                      description: "Your request has been sent to the ride creator.",
+                    });
+                  } catch (error) {
+                    toast({
+                      variant: "destructive",
+                      title: "Error",
+                      description: error instanceof Error ? error.message : "Failed to send request",
+                    });
+                  }
+                }}
+              >
+                Request Seat
+              </Button>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

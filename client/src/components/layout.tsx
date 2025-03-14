@@ -16,7 +16,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const handleLogout = async () => {
     try {
       await apiRequest("POST", "/api/auth/logout");
-      window.location.href = "/login";
+      window.location.href = "/auth/login";
     } catch (error) {
       toast({
         variant: "destructive",
