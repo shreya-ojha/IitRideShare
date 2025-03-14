@@ -27,7 +27,7 @@ export default function CreateRide() {
     defaultValues: {
       source: "",
       destination: "",
-      departureDate: new Date().toISOString().slice(0, 16), // Format: YYYY-MM-DDThh:mm
+      departureDate: "",
       availableSeats: 1,
       costPerSeat: 50,
     },
@@ -121,7 +121,7 @@ export default function CreateRide() {
                   <Input 
                     type="number" 
                     min="1" 
-                    max="4" 
+                    max="7" 
                     {...field} 
                     onChange={(e) => field.onChange(parseInt(e.target.value))}
                   />
