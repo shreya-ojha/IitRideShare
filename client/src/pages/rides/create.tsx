@@ -37,6 +37,7 @@ export default function CreateRide() {
     try {
       setIsLoading(true);
       await apiRequest("POST", "/api/rides", values);
+      await queryClient.invalidateQueries({ queryKey: ["/api/rides"] });
       toast({
         title: "Success",
         description: "Ride created successfully",
