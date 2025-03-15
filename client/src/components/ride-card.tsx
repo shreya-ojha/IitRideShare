@@ -11,10 +11,11 @@ import type { User } from "@shared/schema";
 interface RideCardProps {
   ride: Ride;
   onRequestJoin?: (rideId: number) => void;
+  handleRequestAction?: (rideId: number, action: 'accepted' | 'rejected') => void;
   showActions?: boolean;
 }
 
-export default function RideCard({ ride, onRequestJoin, showActions = true }: RideCardProps) {
+export default function RideCard({ ride, onRequestJoin, handleRequestAction, showActions = true }: RideCardProps) {
   // Get current user to check if they're the ride creator
   const { data: currentUser } = useQuery<User>({
     queryKey: ["/api/auth/me"],
@@ -67,16 +68,27 @@ export default function RideCard({ ride, onRequestJoin, showActions = true }: Ri
         )}
       </CardContent>
 
-      {showActions && !isCreator && (
-        <CardFooter className="flex justify-end pt-4">
+      <CardFooter className="flex justify-between">
+        {showActions && onRequestJoin && (
           <Button
-            onClick={() => onRequestJoin?.(ride.id)}
-            disabled={ride.availableSeats === 0 || ride.status !== "active"}
+            variant="default"
+            onClick={onRequestJoin}
+            className="w-full"
           >
-            Request to Join
+            Request Ride
           </Button>
-        </CardFooter>
-      )}
+        )}
+        {ride.status === "pending_requests" && handleRequestAction && (
+          <div className="space-x-2">
+            <Button variant="default" onClick={() => handleRequestAction(ride.id, 'accepted')}>
+              Accept
+            </Button>
+            <Button variant="destructive" onClick={() => handleRequestAction(ride.id, 'rejected')}>
+              Decline
+            </Button>
+          </div>
+        )}
+      </CardFooter>
     </Card>
   );
 }

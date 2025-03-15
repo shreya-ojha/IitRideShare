@@ -8,9 +8,26 @@ import type { Ride, RideRequest } from "@shared/schema";
 export default function RidesIndex() {
   const { toast } = useToast();
   
-  const { data: rides = [] } = useQuery<Ride[]>({
+  const { data: rides = [], refetch: refetchRides } = useQuery<Ride[]>({
     queryKey: ["/api/rides"],
   });
+
+  const handleRequestRide = async (rideId: number) => {
+    try {
+      await apiRequest("POST", `/api/rides/${rideId}/requests`, {});
+      await refetchRides();
+      toast({
+        title: "Success",
+        description: "Ride request sent successfully",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to request ride",
+      });
+    }
+  };
 
   const { data: user } = useQuery({
     queryKey: ["/api/auth/me"],
@@ -35,7 +52,7 @@ export default function RidesIndex() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold">Available Rides</h1>
+      <h1 className="text-3xl font-bold text-primary">IIT Indore Rides</h1>
       
       {user && rides.some(ride => ride.creatorId === user.id) && (
         <div className="bg-muted p-4 rounded-lg space-y-4">
