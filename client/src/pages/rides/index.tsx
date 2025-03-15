@@ -3,13 +3,41 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import RideCard from "@/components/ride-card";
+import { Plus, Car, Clock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import type { Ride, RideRequest } from "@shared/schema";
 
 export default function RidesIndex() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const { data: rides = [], refetch: refetchRides } = useQuery<Ride[]>({
     queryKey: ["/api/rides"],
+  });
+
+  const { data: user } = useQuery({
+    queryKey: ["/api/auth/me"],
+  });
+
+  const { data: requests = [], refetch: refetchRequests } = useQuery<RideRequest[]>({
+    queryKey: ["/api/rides/requests"],
+    enabled: !!user,
+  });
+
+  const updateRequestMutation = useMutation({
+    mutationFn: async ({ requestId, rideId, status }: { requestId: number, rideId: number, status: string }) => {
+      await apiRequest("POST", `/api/rides/${rideId}/requests/${requestId}`, { status });
+      await refetchRequests();
+      await refetchRides();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Request updated successfully",
+      });
+    },
   });
 
   const handleRequestRide = async (rideId: number) => {
@@ -29,101 +57,105 @@ export default function RidesIndex() {
     }
   };
 
-  const { data: user } = useQuery({
-    queryKey: ["/api/auth/me"],
-  });
-
-  const { data: requests = [] } = useQuery<RideRequest[]>({
-    queryKey: ["/api/rides/requests"],
-    enabled: !!user,
-  });
-
-  const updateRequestMutation = useMutation({
-    mutationFn: async ({ requestId, rideId, status }: { requestId: number, rideId: number, status: string }) => {
-      return apiRequest("POST", `/api/rides/${rideId}/requests/${requestId}`, { status });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Request updated",
-        description: "The ride request has been updated.",
-      });
-    },
-  });
+  const myRides = rides.filter(ride => ride.creatorId === user?.id);
+  const availableRides = rides.filter(ride => ride.creatorId !== user?.id && ride.availableSeats > 0);
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-primary">IIT Indore Rides</h1>
-      
-      {user && rides.some(ride => ride.creatorId === user.id) && (
-        <div className="bg-muted p-4 rounded-lg space-y-4">
-          <h2 className="text-xl font-semibold">Pending Requests</h2>
-          {requests.map((request) => (
-            <div key={request.id} className="flex items-center justify-between bg-background p-4 rounded-lg">
-              <div>
-                <p>From: {request.user?.username}</p>
-                <p className="text-sm text-muted-foreground">Student ID: {request.user?.studentId}</p>
-              </div>
-              <div className="space-x-2">
-                <Button 
-                  variant="default"
-                  onClick={() => updateRequestMutation.mutate({ 
-                    requestId: request.id, 
-                    rideId: request.rideId,
-                    status: 'accepted' 
-                  })}
-                >
-                  Accept
-                </Button>
-                <Button 
-                  variant="destructive"
-                  onClick={() => updateRequestMutation.mutate({ 
-                    requestId: request.id,
-                    rideId: request.rideId, 
-                    status: 'rejected' 
-                  })}
-                >
-                  Decline
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+    <div className="space-y-8 p-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-primary">IIT Indore Rides</h1>
+        <Button onClick={() => navigate("/rides/create")} className="gap-2">
+          <Plus className="h-4 w-4" /> Create Ride
+        </Button>
+      </div>
 
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {rides.map((ride) => (
-          <div key={ride.id} className="bg-muted p-4 rounded-lg">
-            <h3 className="font-semibold">{ride.source} → {ride.destination}</h3>
-            <p className="text-sm text-muted-foreground">
-              {new Date(ride.departureDate).toLocaleString()}
-            </p>
-            <p>Available seats: {ride.availableSeats}</p>
-            <p>Cost per seat: ₹{ride.costPerSeat}</p>
-            {user && user.id !== ride.creatorId && (
-              <Button 
-                className="mt-2"
-                onClick={async () => {
-                  try {
-                    await apiRequest("POST", `/api/rides/${ride.id}/requests`);
-                    toast({
-                      title: "Request sent",
-                      description: "Your request has been sent to the ride creator.",
-                    });
-                  } catch (error) {
-                    toast({
-                      variant: "destructive",
-                      title: "Error",
-                      description: error instanceof Error ? error.message : "Failed to send request",
-                    });
-                  }
-                }}
-              >
-                Request Seat
-              </Button>
+      <Tabs defaultValue="available" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="available" className="gap-2">
+            <Car className="h-4 w-4" /> Available Rides
+          </TabsTrigger>
+          <TabsTrigger value="my-rides" className="gap-2">
+            <Clock className="h-4 w-4" /> My Rides & Requests
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="available">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {availableRides.map((ride) => (
+              <RideCard
+                key={ride.id}
+                ride={ride}
+                onRequestJoin={() => handleRequestRide(ride.id)}
+              />
+            ))}
+            {availableRides.length === 0 && (
+              <p className="col-span-full text-center text-muted-foreground py-8">
+                No available rides at the moment
+              </p>
             )}
           </div>
-        ))}
-      </div>
+        </TabsContent>
+
+        <TabsContent value="my-rides">
+          <div className="space-y-8">
+            {requests.length > 0 && (
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold">Pending Requests</h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {requests.map((request) => (
+                    <div key={request.id} className="bg-card p-4 rounded-lg border">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium">{request.user?.username}</p>
+                          <p className="text-sm text-muted-foreground">Student ID: {request.user?.studentId}</p>
+                        </div>
+                        <div className="space-x-2">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => updateRequestMutation.mutate({
+                              requestId: request.id,
+                              rideId: request.rideId,
+                              status: 'accepted'
+                            })}
+                          >
+                            Accept
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => updateRequestMutation.mutate({
+                              requestId: request.id,
+                              rideId: request.rideId,
+                              status: 'rejected'
+                            })}
+                          >
+                            Decline
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold">My Created Rides</h2>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {myRides.map((ride) => (
+                  <RideCard key={ride.id} ride={ride} showActions={false} />
+                ))}
+                {myRides.length === 0 && (
+                  <p className="col-span-full text-center text-muted-foreground py-8">
+                    You haven't created any rides yet
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
