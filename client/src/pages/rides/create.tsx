@@ -27,7 +27,7 @@ export default function CreateRide() {
     defaultValues: {
       source: "",
       destination: "",
-      departureDate: "",
+      departureDate: new Date().toISOString().slice(0, 16),
       availableSeats: 1,
       costPerSeat: 50,
     },
@@ -123,7 +123,12 @@ export default function CreateRide() {
                     min="1" 
                     max="7" 
                     {...field} 
-                    onChange={(e) => field.onChange(parseInt(e.target.value))}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (value >= 1 && value <= 7) {
+                        field.onChange(value);
+                      }
+                    }}
                   />
                 </FormControl>
                 <FormMessage />

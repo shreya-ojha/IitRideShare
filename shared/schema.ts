@@ -46,7 +46,7 @@ export const insertRideSchema = createInsertSchema(rides).pick({
   costPerSeat: true,
 }).extend({
   departureDate: z.string().transform((str) => new Date(str)),
-  availableSeats: z.number().min(1).max(4),
+  availableSeats: z.number().min(1).max(7),
   costPerSeat: z.number().min(10),
 });
 
