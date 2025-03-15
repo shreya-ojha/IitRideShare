@@ -61,8 +61,9 @@ export default function RidesIndex() {
   const availableRides = rides.filter(ride => ride.creatorId !== user?.id && ride.availableSeats > 0);
 
   return (
-    <div className="space-y-8 p-6">
-      <div className="flex justify-between items-center">
+    <>
+      <div className="space-y-8 p-6">
+        <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-primary">IIT Indore Rides</h1>
         <Button onClick={() => setLocation("/rides/create")} className="gap-2"> {/* Changed to wouter's hook */}
           <Plus className="h-4 w-4" /> Create Ride
@@ -156,7 +157,8 @@ export default function RidesIndex() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
-    <ChatInterface />
+      </div>
+      <ChatInterface />
+    </>
   );
 }
