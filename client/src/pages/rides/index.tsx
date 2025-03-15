@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -12,7 +11,7 @@ import type { Ride, RideRequest } from "@shared/schema";
 export default function RidesIndex() {
   const { toast } = useToast();
   const navigate = useNavigate();
-  
+
   const { data: rides = [], refetch: refetchRides } = useQuery<Ride[]>({
     queryKey: ["/api/rides"],
   });
