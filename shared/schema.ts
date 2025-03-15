@@ -59,4 +59,36 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Ride = typeof rides.$inferSelect;
 export type InsertRide = z.infer<typeof insertRideSchema>;
 export type RideRequest = typeof rideRequests.$inferSelect;
+export const rideRatings = pgTable("ride_ratings", {
+  id: serial("id").primaryKey(),
+  rideId: integer("ride_id").notNull(),
+  userId: integer("user_id").notNull(),
+  rating: integer("rating").notNull(),
+  review: text("review"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  rideId: integer("ride_id").notNull(),
+  senderId: integer("sender_id").notNull(),
+  recipientId: integer("recipient_id").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertRatingSchema = createInsertSchema(rideRatings).pick({
+  rideId: true,
+  rating: true,
+  review: true,
+});
+
+export const insertMessageSchema = createInsertSchema(messages).pick({
+  rideId: true,
+  recipientId: true,
+  content: true,
+});
+
 export type InsertRideRequest = z.infer<typeof insertRideRequestSchema>;
+export type RideRating = typeof rideRatings.$inferSelect;
+export type Message = typeof messages.$inferSelect;

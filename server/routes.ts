@@ -222,6 +222,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/rides/:rideId/ratings", async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+      const rideId = parseInt(req.params.rideId);
+      const data = insertRatingSchema.parse(req.body);
+      const rating = await storage.createRating({
+        ...data,
+        userId: req.session.userId,
+        rideId,
+      });
+      res.json(rating);
+    } catch (error) {
+      res.status(400).json({ message: error instanceof Error ? error.message : "Invalid request" });
+    }
+  });
+
+  app.get("/api/rides/:rideId/ratings", async (req, res) => {
+    try {
+      const rideId = parseInt(req.params.rideId);
+      const ratings = await storage.getRideRatings(rideId);
+      res.json(ratings);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch ratings" });
+    }
+  });
+
+  app.post("/api/rides/:rideId/messages", async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+      const rideId = parseInt(req.params.rideId);
+      const data = insertMessageSchema.parse(req.body);
+      const message = await storage.createMessage({
+        ...data,
+        senderId: req.session.userId,
+        rideId,
+      });
+      res.json(message);
+    } catch (error) {
+      res.status(400).json({ message: error instanceof Error ? error.message : "Invalid request" });
+    }
+  });
+
+  app.get("/api/rides/:rideId/messages", async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+      const rideId = parseInt(req.params.rideId);
+      const messages = await storage.getRideMessages(rideId, req.session.userId);
+      res.json(messages);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
