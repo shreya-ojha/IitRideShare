@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RideCard from "@/components/ride-card";
 import { Plus, Car, Clock } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "wouter"; // Changed import
 import type { Ride, RideRequest } from "@shared/schema";
 
 export default function RidesIndex() {
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const [location, setLocation] = useLocation(); // Changed to wouter's hook
 
   const { data: rides = [], refetch: refetchRides } = useQuery<Ride[]>({
     queryKey: ["/api/rides"],
@@ -63,7 +63,7 @@ export default function RidesIndex() {
     <div className="space-y-8 p-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-primary">IIT Indore Rides</h1>
-        <Button onClick={() => navigate("/rides/create")} className="gap-2">
+        <Button onClick={() => setLocation("/rides/create")} className="gap-2"> {/* Changed to wouter's hook */}
           <Plus className="h-4 w-4" /> Create Ride
         </Button>
       </div>
