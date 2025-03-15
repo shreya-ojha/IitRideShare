@@ -35,7 +35,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   studentId: true,
 }).extend({
   password: z.string().min(6, "Password must be at least 6 characters"),
-  studentId: z.string().regex(/^\d{8}$/, "Student ID must be 8 digits"),
+  studentId: z.string().regex(/^\d{9}$/, "Student ID must be 9 digits"),
 });
 
 export const insertRideSchema = createInsertSchema(rides).pick({

@@ -2,6 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import ChatInterface from "@/components/chat-interface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RideCard from "@/components/ride-card";
 import { Plus, Car, Clock } from "lucide-react";
@@ -156,5 +157,6 @@ export default function RidesIndex() {
         </TabsContent>
       </Tabs>
     </div>
+    <ChatInterface />
   );
 }
