@@ -20,9 +20,6 @@ Node.js (for frontend)
 npm or yarn (for package management)
 Express.js or Django (for backend)
 PostgreSQL or any other database (for data storage)
-Installation
-Clone the repository
-git clone https://github.com/yourusername/rideshare-iit-indore.git
 cd rideshare-iit-indore
 Frontend Setup
 
